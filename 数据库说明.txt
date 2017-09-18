@@ -1,0 +1,90 @@
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'aqjrMongoService': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected com.meritit.framework.dao.IDao com.meritit.framework.service.BaseService.baseDao; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No matching bean of type [com.meritit.framework.dao.IDao] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true), @org.springframework.beans.factory.annotation.Qualifier(value=baseHibernateDao)}
+
+
+
+ Error creating bean with name 'aqjrMongoService': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected com.meritit.framework.dao.IDao com.meritit.framework.service.BaseService.baseDao; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No matching bean of type [com.meritit.framework.dao.IDao] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true), @org.springframework.beans.factory.annotation.Qualifier(value=baseHibernateDao)}
+
+
+  Error creating bean with name 'aqjrMongoService': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected com.meritit.framework.dao.IDao com.meritit.framework.service.BaseService.baseDao; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'baseHibernateDao': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire method: public void com.meritit.framework.dao.BaseHibernateDao.init(org.hibernate.SessionFactory); nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'sessionFactory' defined in class path resource [woody/test/applicationContext-test.xml]: Invocation of init method failed; nested exception is java.lang.NoSuchMethodError: javax.persistence.OneToOne.orphanRemoval()Z
+
+
+  org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'aqjrMongoService': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected com.meritit.framework.dao.IDao com.meritit.framework.service.BaseService.baseDao; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'baseHibernateDao': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire method: public void com.meritit.framework.dao.BaseHibernateDao.init(org.hibernate.SessionFactory); nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'sessionFactory' defined in class path resource [woody/test/applicationContext-test.xml]: Invocation of init method failed; nested exception is java.lang.NoClassDefFoundError: javax/persistence/Cacheable
+
+
+
+  public List<ResGuideline> getHostGuideline(List<String> idList,
+			List<ProcessGuideline> proList) {
+		List<ResGuideline> list = new ArrayList<ResGuideline>();
+		List<Guideline> guiList = new ArrayList<Guideline>();
+		// 主机进程
+        if(CollectionUtils.isNotEmpty(idList)){
+
+            int idsCount = idList.size();
+            int count = Math.min(idsCount,100);
+            int size = idsCount % count;
+            if(size==0){
+                size =  idsCount/count;
+            }else{
+                size = (idsCount/count) + 1;
+            }
+
+        for (int i = 0; i < size; i++) {
+            int fromIndex = i*count;
+            int toIndex = Math.min(fromIndex+count,idsCount);
+            Query query = new Query();
+            query.addCriteria(Criteria.where("code").is(
+                    AccessGuidelineCode.PROCESSES));
+            query.addCriteria(Criteria.where("resourceId").in(idList));
+            query.skip(fromIndex).limit(toIndex-fromIndex);
+            guiList.addAll(mongoService.find(Guideline.class, query));
+        }
+        }
+//        Query query = new Query();
+//		query.addCriteria(Criteria.where("resourceId").in(idList));
+//		query.addCriteria(Criteria.where("code").is(
+//				AccessGuidelineCode.PROCESSES));
+//		guiList = mongoService.find(Guideline.class, query);
+		// 进程处理
+		for (Guideline info : guiList) {
+			if (info.getMonValue() != null && (info.getMonValue() instanceof ArrayList)) {
+				List<ResProcessInfo> temPro = (List<ResProcessInfo>) info .getMonValue();
+				for (ResProcessInfo proInfo : temPro) {
+					for (ProcessGuideline pro : proList) {
+						if(proInfo.getHrSWRunName()!= null&&!"".equals(proInfo.getHrSWRunName())){
+							if (proInfo.getHrSWRunName().contains(pro.getProcess())) {
+								ResGuideline guideline = new ResGuideline();
+								String id = UUIDUtil.getUUID();
+								guideline.setId(id);
+								guideline.setAccResId(info.getResourceId());
+								guideline.setGuidelineId(info.getGuidelineId());
+								guideline.setGuidelineName(pro.getName());
+								guideline.setGuidelineType(info.getCode());
+								guideline.setGuidelineState("0");// 0：为非法 1：合法
+								guideline.setGuidelineValue(proInfo.getHrSWRunName());
+								list.add(guideline);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		return list;
+	}
+
+
+
+	 DBObject dbObject = new BasicDBObject();
+            dbObject.put("code",  AccessGuidelineCode.PROCESSES);
+            dbObject.put("resourceId",  idList.get(i));
+            DBObject fieldObject = new BasicDBObject();
+            fieldObject.put("guidelineId", true);
+            fieldObject.put("monValue", true);
+            fieldObject.put("resourceId", true);
+            fieldObject.put("orgCode", true);
+            fieldObject.put("resourceIp", true);
+            Query query = new BasicQuery(dbObject, fieldObject);
+//            Query query = new Query();
+//            query.addCriteria(Criteria.where("resourceId").is(idList.get(i)));
+
+            guiList.addAll(mongoService.find(Guideline.class, query));
